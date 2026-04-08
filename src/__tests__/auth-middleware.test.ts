@@ -127,6 +127,7 @@ describe("twilioWebhookAuth middleware", () => {
 
       expect(mockValidateRequest).toHaveBeenCalledWith(
         "test_auth_token",
+        "my-sig",
         expect.stringContaining("/voice/incoming"),
         expect.objectContaining({ CallSid: "CA123" }),
       );
