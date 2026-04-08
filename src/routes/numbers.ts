@@ -50,7 +50,7 @@ router.get("/", adminApiKeyAuth, async (_req, res) => {
  * Sets the voice URL to point to our /voice/incoming webhook.
  */
 router.post("/:sid/configure", adminApiKeyAuth, async (req, res) => {
-  const { sid } = req.params;
+  const sid = String(req.params.sid);
 
   try {
     const client = getTwilioClient();
@@ -76,7 +76,7 @@ router.post("/:sid/configure", adminApiKeyAuth, async (req, res) => {
  * POST /numbers/:sid/unconfigure — Remove Davoxi from a Twilio number.
  */
 router.post("/:sid/unconfigure", adminApiKeyAuth, async (req, res) => {
-  const { sid } = req.params;
+  const sid = String(req.params.sid);
 
   try {
     const client = getTwilioClient();
