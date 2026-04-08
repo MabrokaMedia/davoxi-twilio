@@ -9,7 +9,8 @@ const router = Router();
  */
 function adminApiKeyAuth(req: Request, res: Response, next: NextFunction): void {
   const adminApiKey = process.env.ADMIN_API_KEY;
-  const providedKey = req.headers["x-api-key"];
+  const rawKey = req.headers["x-api-key"];
+  const providedKey = Array.isArray(rawKey) ? rawKey[0] : rawKey;
 
   if (!adminApiKey || providedKey !== adminApiKey) {
     res.status(401).json({ error: "Unauthorized" });
