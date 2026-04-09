@@ -55,6 +55,7 @@ jest.mock("../config", () => ({
 import voiceRouter from "../routes/voice";
 import numbersRouter from "../routes/numbers";
 import { getTwilioClient } from "../services/twilio-client";
+import { _pendingTokens } from "../services/stream-token";
 
 const TEST_ADMIN_API_KEY = "test-admin-key";
 
@@ -80,6 +81,7 @@ describe("Voice routes", () => {
 
   beforeEach(() => {
     app = createApp();
+    _pendingTokens.clear();
   });
 
   describe("POST /voice/incoming", () => {
@@ -91,6 +93,31 @@ describe("Voice routes", () => {
 
       expect(res.status).toBe(200);
       expect(res.headers["content-type"]).toMatch(/xml/);
+    });
+
+    it("should add a stream token to the pending tokens map", async () => {
+      await request(app)
+        .post("/voice/incoming")
+        .set("x-twilio-signature", "valid-sig")
+        .send({});
+
+      expect(_pendingTokens.size).toBe(1);
+      const [[token, expiry]] = [..._pendingTokens];
+      expect(token).toMatch(/^[0-9a-f]{64}$/);
+      expect(expiry).toBeGreaterThan(Date.now());
+    });
+
+    it("should generate a different token for each call", async () => {
+      await request(app)
+        .post("/voice/incoming")
+        .set("x-twilio-signature", "valid-sig")
+        .send({});
+      await request(app)
+        .post("/voice/incoming")
+        .set("x-twilio-signature", "valid-sig")
+        .send({});
+
+      expect(_pendingTokens.size).toBe(2);
     });
   });
 
