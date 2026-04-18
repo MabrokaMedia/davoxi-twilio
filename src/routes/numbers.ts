@@ -1,4 +1,5 @@
 import { Router, Request, Response, NextFunction } from "express";
+import { timingSafeEqual } from "crypto";
 import { getTwilioClient } from "../services/twilio-client";
 import { config } from "../config";
 
@@ -12,7 +13,19 @@ function adminApiKeyAuth(req: Request, res: Response, next: NextFunction): void 
   const rawKey = req.headers["x-api-key"];
   const providedKey = Array.isArray(rawKey) ? rawKey[0] : rawKey;
 
-  if (!adminApiKey || providedKey !== adminApiKey) {
+  // Use constant-time comparison to prevent timing-oracle attacks
+  const keysMatch =
+    adminApiKey &&
+    providedKey &&
+    (() => {
+      try {
+        return timingSafeEqual(Buffer.from(providedKey), Buffer.from(adminApiKey));
+      } catch {
+        return false;
+      }
+    })();
+
+  if (!keysMatch) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }

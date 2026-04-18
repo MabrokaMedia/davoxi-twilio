@@ -284,4 +284,26 @@ describe("adminApiKeyAuth middleware", () => {
       process.env.ADMIN_API_KEY = saved;
     });
   });
+
+  describe("timing-safe comparison", () => {
+    it("returns 401 when key has different length than ADMIN_API_KEY (no throw)", async () => {
+      // Different-length keys would cause timingSafeEqual to throw if uncaught — verify it does
+      // not bubble up as a 500 and is handled gracefully.
+      const res = await request(app)
+        .get("/numbers")
+        .set("x-api-key", "x"); // much shorter than ADMIN_API_KEY
+
+      expect(res.status).toBe(401);
+      expect(res.body).toEqual({ error: "Unauthorized" });
+    });
+
+    it("returns 401 when key is longer than ADMIN_API_KEY (no throw)", async () => {
+      const res = await request(app)
+        .get("/numbers")
+        .set("x-api-key", ADMIN_API_KEY + ADMIN_API_KEY + "extra");
+
+      expect(res.status).toBe(401);
+      expect(res.body).toEqual({ error: "Unauthorized" });
+    });
+  });
 });
