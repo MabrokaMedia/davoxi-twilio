@@ -36,7 +36,7 @@ jest.mock("twilio", () => {
   mockClient.incomingPhoneNumbers = incomingPhoneNumbers;
 
   const twilioFn = jest.fn(() => mockClient) as any;
-  twilioFn.validateRequest = jest.fn();
+  twilioFn.validateRequest = jest.fn().mockReturnValue(true);
   twilioFn.twiml = { VoiceResponse };
 
   return { __esModule: true, default: twilioFn, twiml: { VoiceResponse } };
@@ -56,6 +56,8 @@ import voiceRouter from "../routes/voice";
 import numbersRouter from "../routes/numbers";
 import { getTwilioClient } from "../services/twilio-client";
 
+const TEST_ADMIN_API_KEY = "test-admin-key";
+
 function createApp(): Express {
   const app = express();
   app.use(express.json());
@@ -64,6 +66,14 @@ function createApp(): Express {
   app.use("/numbers", numbersRouter);
   return app;
 }
+
+beforeAll(() => {
+  process.env.ADMIN_API_KEY = TEST_ADMIN_API_KEY;
+});
+
+afterAll(() => {
+  delete process.env.ADMIN_API_KEY;
+});
 
 describe("Voice routes", () => {
   let app: Express;
@@ -74,7 +84,10 @@ describe("Voice routes", () => {
 
   describe("POST /voice/incoming", () => {
     it("should return TwiML XML response", async () => {
-      const res = await request(app).post("/voice/incoming").send({});
+      const res = await request(app)
+        .post("/voice/incoming")
+        .set("x-twilio-signature", "valid-sig")
+        .send({});
 
       expect(res.status).toBe(200);
       expect(res.headers["content-type"]).toMatch(/xml/);
@@ -83,11 +96,14 @@ describe("Voice routes", () => {
 
   describe("POST /voice/stream-status", () => {
     it("should return 200 for stream status updates", async () => {
-      const res = await request(app).post("/voice/stream-status").send({
-        StreamSid: "MZ123",
-        StreamStatus: "connected",
-        CallSid: "CA123",
-      });
+      const res = await request(app)
+        .post("/voice/stream-status")
+        .set("x-twilio-signature", "valid-sig")
+        .send({
+          StreamSid: "MZ123",
+          StreamStatus: "connected",
+          CallSid: "CA123",
+        });
 
       expect(res.status).toBe(200);
     });
@@ -95,11 +111,14 @@ describe("Voice routes", () => {
 
   describe("POST /voice/call-status", () => {
     it("should return 200 for call status updates", async () => {
-      const res = await request(app).post("/voice/call-status").send({
-        CallSid: "CA123",
-        CallStatus: "completed",
-        CallDuration: "45",
-      });
+      const res = await request(app)
+        .post("/voice/call-status")
+        .set("x-twilio-signature", "valid-sig")
+        .send({
+          CallSid: "CA123",
+          CallStatus: "completed",
+          CallDuration: "45",
+        });
 
       expect(res.status).toBe(200);
     });
@@ -132,7 +151,9 @@ describe("Numbers routes", () => {
         },
       ]);
 
-      const res = await request(app).get("/numbers");
+      const res = await request(app)
+        .get("/numbers")
+        .set("x-api-key", TEST_ADMIN_API_KEY);
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual([
@@ -151,7 +172,9 @@ describe("Numbers routes", () => {
         new Error("Twilio API error"),
       );
 
-      const res = await request(app).get("/numbers");
+      const res = await request(app)
+        .get("/numbers")
+        .set("x-api-key", TEST_ADMIN_API_KEY);
 
       expect(res.status).toBe(500);
       expect(res.body).toEqual({ error: "Twilio API error" });
@@ -160,7 +183,10 @@ describe("Numbers routes", () => {
 
   describe("POST /numbers/:sid/configure", () => {
     it("should configure a number for Davoxi", async () => {
-      const res = await request(app).post("/numbers/PN111/configure").send();
+      const res = await request(app)
+        .post("/numbers/PN111/configure")
+        .set("x-api-key", TEST_ADMIN_API_KEY)
+        .send();
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);
@@ -170,7 +196,10 @@ describe("Numbers routes", () => {
 
   describe("POST /numbers/:sid/unconfigure", () => {
     it("should unconfigure a number", async () => {
-      const res = await request(app).post("/numbers/PN111/unconfigure").send();
+      const res = await request(app)
+        .post("/numbers/PN111/unconfigure")
+        .set("x-api-key", TEST_ADMIN_API_KEY)
+        .send();
 
       expect(res.status).toBe(200);
       expect(res.body.success).toBe(true);

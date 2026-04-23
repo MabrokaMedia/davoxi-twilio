@@ -1,13 +1,29 @@
-import { Router } from "express";
+import { Router, Request, Response, NextFunction } from "express";
 import { getTwilioClient } from "../services/twilio-client";
 import { config } from "../config";
 
 const router = Router();
 
 /**
+ * Middleware: verify that the request carries the admin API key.
+ */
+function adminApiKeyAuth(req: Request, res: Response, next: NextFunction): void {
+  const adminApiKey = process.env.ADMIN_API_KEY;
+  const rawKey = req.headers["x-api-key"];
+  const providedKey = Array.isArray(rawKey) ? rawKey[0] : rawKey;
+
+  if (!adminApiKey || providedKey !== adminApiKey) {
+    res.status(401).json({ error: "Unauthorized" });
+    return;
+  }
+
+  next();
+}
+
+/**
  * GET /numbers — List phone numbers configured for Davoxi.
  */
-router.get("/", async (_req, res) => {
+router.get("/", adminApiKeyAuth, async (_req, res) => {
   try {
     const client = getTwilioClient();
     const numbers = await client.incomingPhoneNumbers.list();
@@ -33,8 +49,8 @@ router.get("/", async (_req, res) => {
  *
  * Sets the voice URL to point to our /voice/incoming webhook.
  */
-router.post("/:sid/configure", async (req, res) => {
-  const { sid } = req.params;
+router.post("/:sid/configure", adminApiKeyAuth, async (req, res) => {
+  const sid = String(req.params.sid);
 
   try {
     const client = getTwilioClient();
@@ -59,8 +75,8 @@ router.post("/:sid/configure", async (req, res) => {
 /**
  * POST /numbers/:sid/unconfigure — Remove Davoxi from a Twilio number.
  */
-router.post("/:sid/unconfigure", async (req, res) => {
-  const { sid } = req.params;
+router.post("/:sid/unconfigure", adminApiKeyAuth, async (req, res) => {
+  const sid = String(req.params.sid);
 
   try {
     const client = getTwilioClient();
