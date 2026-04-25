@@ -12,8 +12,8 @@ const app = express();
 
 app.use(helmet());
 app.use(cors({ origin: process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(",") : false }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "16kb" }));
+app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 
 // Health check
 app.get("/health", (_req, res) => {
