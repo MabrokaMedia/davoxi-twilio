@@ -233,3 +233,34 @@ describe("Numbers routes", () => {
     });
   });
 });
+
+describe("Body size limit", () => {
+  it("should reject JSON payloads larger than 16kb", async () => {
+    const limitedApp = express();
+    limitedApp.use(express.json({ limit: "16kb" }));
+    limitedApp.post("/test", (req, res) => res.json({ ok: true }));
+
+    const oversizedPayload = { data: "x".repeat(20_000) };
+    const res = await request(limitedApp)
+      .post("/test")
+      .set("Content-Type", "application/json")
+      .send(JSON.stringify(oversizedPayload));
+
+    expect(res.status).toBe(413);
+  });
+
+  it("should accept JSON payloads within 16kb", async () => {
+    const limitedApp = express();
+    limitedApp.use(express.json({ limit: "16kb" }));
+    limitedApp.post("/test", (req, res) => res.json({ ok: true }));
+
+    const smallPayload = { data: "x".repeat(100) };
+    const res = await request(limitedApp)
+      .post("/test")
+      .set("Content-Type", "application/json")
+      .send(JSON.stringify(smallPayload));
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ ok: true });
+  });
+});
