@@ -1,9 +1,21 @@
 import { Router, Request, Response, NextFunction } from "express";
+import rateLimit from "express-rate-limit";
 import { twiml as TwiML } from "twilio";
 import { config } from "../config";
 import { validateTwilioRequest } from "../services/twilio-client";
+import { issueStreamToken, isStreamTokenEnforced } from "../services/stream-token";
 
 const router = Router();
+
+const voiceLimiter = rateLimit({
+  windowMs: 60_000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests" },
+});
+
+router.use(voiceLimiter);
 
 /**
  * Middleware: verify that the incoming request carries a valid Twilio signature.
@@ -23,23 +35,29 @@ function twilioWebhookAuth(req: Request, res: Response, next: NextFunction): voi
 
 /**
  * POST /voice/incoming — Handle incoming Twilio voice calls.
- *
- * Returns TwiML that connects the call to Davoxi's AI voice agent
- * via a bidirectional Media Stream WebSocket.
  */
 router.post("/incoming", twilioWebhookAuth, (req, res) => {
   const response = new TwiML.VoiceResponse();
+  const callSid = (req.body as Record<string, string>)?.CallSid || "unknown";
 
-  // Optional: play a greeting while connecting
   response.say(
     { voice: "Polly.Amy" },
     "Please hold while we connect you to our AI assistant.",
   );
 
-  // Connect to Davoxi via bidirectional media stream
+  let streamUrl = `${config.wsUrl}/media-stream`;
+  const token = issueStreamToken(callSid);
+  if (token) {
+    streamUrl = `${streamUrl}?token=${encodeURIComponent(token)}`;
+  } else if (!isStreamTokenEnforced()) {
+    console.warn(
+      "[voice] STREAM_TOKEN_SECRET not set — /media-stream is unauthenticated. Set STREAM_TOKEN_SECRET (≥16 chars) in production.",
+    );
+  }
+
   const connect = response.connect();
   connect.stream({
-    url: `${config.wsUrl}/media-stream`,
+    url: streamUrl,
     statusCallback: `${config.appUrl}/voice/stream-status`,
     statusCallbackMethod: "POST",
   });
@@ -58,7 +76,9 @@ router.post("/stream-status", twilioWebhookAuth, (req, res) => {
     CallSid?: string;
   };
 
-  console.log(`Stream ${StreamSid} for call ${CallSid}: ${StreamStatus}`);
+  console.log(
+    `Stream ${JSON.stringify(StreamSid)} for call ${JSON.stringify(CallSid)}: ${JSON.stringify(StreamStatus)}`,
+  );
   res.status(200).send();
 });
 
@@ -72,7 +92,9 @@ router.post("/call-status", twilioWebhookAuth, (req, res) => {
     CallDuration?: string;
   };
 
-  console.log(`Call ${CallSid}: ${CallStatus} (duration: ${CallDuration}s)`);
+  console.log(
+    `Call ${JSON.stringify(CallSid)}: ${JSON.stringify(CallStatus)} (duration: ${JSON.stringify(CallDuration)}s)`,
+  );
   res.status(200).send();
 });
 

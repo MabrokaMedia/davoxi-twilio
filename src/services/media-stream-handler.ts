@@ -1,5 +1,6 @@
 import WebSocket from "ws";
 import { config } from "../config";
+import { StreamTokenPayload } from "./stream-token";
 
 interface MediaStreamMessage {
   event: string;
@@ -30,8 +31,13 @@ interface MediaStreamMessage {
  * 1. Receives audio from caller via Twilio
  * 2. Forwards to Davoxi's voice AI for processing
  * 3. Sends AI-generated audio back to Twilio → caller
+ *
+ * `tokenPayload`, when provided, pins the stream to the CallSid that was
+ * baked into the token at /voice/incoming time. A `start` frame whose
+ * `callSid` does not match the token is rejected and the socket is closed —
+ * a leaked or replayed token cannot be used to impersonate another call.
  */
-export function handleMediaStream(ws: WebSocket): void {
+export function handleMediaStream(ws: WebSocket, tokenPayload?: StreamTokenPayload): void {
   let streamSid: string | null = null;
   let callSid: string | null = null;
   let davoxiWs: WebSocket | null = null;
@@ -50,6 +56,13 @@ export function handleMediaStream(ws: WebSocket): void {
         break;
 
       case "start":
+        if (tokenPayload && msg.start!.callSid !== tokenPayload.callSid) {
+          console.error(
+            `Stream token callSid mismatch (token=${tokenPayload.callSid} start=${msg.start!.callSid}); closing connection`,
+          );
+          ws.close(1008, "callSid mismatch");
+          return;
+        }
         streamSid = msg.start!.streamSid;
         callSid = msg.start!.callSid;
         console.log(`Media stream started: ${streamSid} (call: ${callSid})`);

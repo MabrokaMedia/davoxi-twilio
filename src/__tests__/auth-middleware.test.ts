@@ -216,7 +216,7 @@ describe("adminApiKeyAuth middleware", () => {
 
   describe("POST /numbers/:sid/configure", () => {
     it("returns 401 when x-api-key header is missing", async () => {
-      const res = await request(app).post("/numbers/PN111/configure").send();
+      const res = await request(app).post("/numbers/PN12345678901234567890123456789012/configure").send();
 
       expect(res.status).toBe(401);
       expect(res.body).toEqual({ error: "Unauthorized" });
@@ -224,7 +224,7 @@ describe("adminApiKeyAuth middleware", () => {
 
     it("returns 401 when x-api-key is wrong", async () => {
       const res = await request(app)
-        .post("/numbers/PN111/configure")
+        .post("/numbers/PN12345678901234567890123456789012/configure")
         .set("x-api-key", "bad-key")
         .send();
 
@@ -233,7 +233,7 @@ describe("adminApiKeyAuth middleware", () => {
 
     it("returns 200 when x-api-key is correct", async () => {
       const res = await request(app)
-        .post("/numbers/PN111/configure")
+        .post("/numbers/PN12345678901234567890123456789012/configure")
         .set("x-api-key", ADMIN_API_KEY)
         .send();
 
@@ -244,7 +244,7 @@ describe("adminApiKeyAuth middleware", () => {
 
   describe("POST /numbers/:sid/unconfigure", () => {
     it("returns 401 when x-api-key header is missing", async () => {
-      const res = await request(app).post("/numbers/PN111/unconfigure").send();
+      const res = await request(app).post("/numbers/PN12345678901234567890123456789012/unconfigure").send();
 
       expect(res.status).toBe(401);
       expect(res.body).toEqual({ error: "Unauthorized" });
@@ -252,7 +252,7 @@ describe("adminApiKeyAuth middleware", () => {
 
     it("returns 401 when x-api-key is wrong", async () => {
       const res = await request(app)
-        .post("/numbers/PN111/unconfigure")
+        .post("/numbers/PN12345678901234567890123456789012/unconfigure")
         .set("x-api-key", "bad-key")
         .send();
 
@@ -261,7 +261,7 @@ describe("adminApiKeyAuth middleware", () => {
 
     it("returns 200 when x-api-key is correct", async () => {
       const res = await request(app)
-        .post("/numbers/PN111/unconfigure")
+        .post("/numbers/PN12345678901234567890123456789012/unconfigure")
         .set("x-api-key", ADMIN_API_KEY)
         .send();
 

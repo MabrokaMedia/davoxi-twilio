@@ -138,7 +138,7 @@ describe("Numbers routes", () => {
       const client = getTwilioClient() as any;
       client.incomingPhoneNumbers.list.mockResolvedValue([
         {
-          sid: "PN111",
+          sid: "PN12345678901234567890123456789012",
           phoneNumber: "+15551111111",
           friendlyName: "Main Line",
           voiceUrl: "http://localhost:3003/voice/incoming",
@@ -158,7 +158,7 @@ describe("Numbers routes", () => {
       expect(res.status).toBe(200);
       expect(res.body).toEqual([
         {
-          sid: "PN111",
+          sid: "PN12345678901234567890123456789012",
           phoneNumber: "+15551111111",
           friendlyName: "Main Line",
           voiceUrl: "http://localhost:3003/voice/incoming",
@@ -177,14 +177,14 @@ describe("Numbers routes", () => {
         .set("x-api-key", TEST_ADMIN_API_KEY);
 
       expect(res.status).toBe(500);
-      expect(res.body).toEqual({ error: "Twilio API error" });
+      expect(res.body).toEqual({ error: "Failed to list phone numbers" });
     });
   });
 
   describe("POST /numbers/:sid/configure", () => {
     it("should configure a number for Davoxi", async () => {
       const res = await request(app)
-        .post("/numbers/PN111/configure")
+        .post("/numbers/PN12345678901234567890123456789012/configure")
         .set("x-api-key", TEST_ADMIN_API_KEY)
         .send();
 
@@ -197,7 +197,7 @@ describe("Numbers routes", () => {
   describe("POST /numbers/:sid/unconfigure", () => {
     it("should unconfigure a number", async () => {
       const res = await request(app)
-        .post("/numbers/PN111/unconfigure")
+        .post("/numbers/PN12345678901234567890123456789012/unconfigure")
         .set("x-api-key", TEST_ADMIN_API_KEY)
         .send();
 
